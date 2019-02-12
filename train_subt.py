@@ -19,13 +19,13 @@ import argparse
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
-print(VOC_ROOT)
+
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
-parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'wamv'],
+parser.add_argument('--dataset', default='subt', choices=['VOC', 'COCO', 'wamv','subt'],
                     type=str, help='VOC or COCO')
-parser.add_argument('--dataset_root', default=VOC_ROOT,
+parser.add_argument('--dataset_root', default=subt_ROOT,
                     help='Dataset root directory path')
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
@@ -39,7 +39,7 @@ parser.add_argument('--num_workers', default=4, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
-parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float,
                     help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float,
                     help='Momentum value for optim')
@@ -93,6 +93,13 @@ def train():
         dataset = wamvDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
+    elif args.dataset == 'subt':
+
+        cfg = subt
+        dataset = subtDetection(root=args.dataset_root,
+                               transform=SSDAugmentation(cfg['min_dim'],
+                                                         MEANS))
+
 
     if args.visdom:
         import visdom
@@ -155,10 +162,9 @@ def train():
     # create batch iterator
     batch_iterator = iter(data_loader)
     for iteration in range(args.start_iter, cfg['max_iter']):
-        if args.visdom and iteration != 0:
+        if args.visdom and iteration != 0 and iteration % epoch_size == 0:
             update_vis_plot_epoch(viz, epoch, loc_loss, conf_loss, epoch_plot,
                             'append', epoch_size)
-
 
         if iteration % epoch_size == 0:
             # reset epoch loss counters
@@ -200,9 +206,9 @@ def train():
             update_vis_plot_iter(viz, iteration, loss_l.data[0], loss_c.data[0],
                             iter_plot, 'append')
 
-        if iteration != 0 and iteration % 500 == 0:
+        if iteration != 0 and iteration % 1000 == 0:
             print('Saving state, iter:', iteration)
-            torch.save(ssd_net.state_dict(), 'weights/ssd300_wamv_' +
+            torch.save(ssd_net.state_dict(), 'weights/ssd300_subt_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
